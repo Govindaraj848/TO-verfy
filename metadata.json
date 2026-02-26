@@ -1,0 +1,7 @@
+{
+  "name": "Remix: Remix: Master Kushals Scan Hub Live",
+  "description": "A high-performance inventory scanning and management dashboard with real-time logging, statistics, and AI-powered activity analysis.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
