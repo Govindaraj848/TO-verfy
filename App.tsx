@@ -24,24 +24,24 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>(View.HOME);
   const [uploadedData, setUploadedData] = useState<any[]>([]);
   const [messagesData, setMessagesData] = useState<any[]>([]);
-  const [usersData, setUsersData] = useState<{name: string, group: string}[]>([]);
+  const [usersData, setUsersData] = useState<{ name: string, group: string }[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('');
-  
+
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [logs, setLogs] = useState<ScanItem[]>([]);
-  
+
   const [sessionCounts, setSessionCounts] = useState<Record<string, number>>({});
   const [sessionId, setSessionId] = useState<string>(Math.random().toString(36).substring(7));
-  
+
   const [selectedReference, setSelectedReference] = useState<string>('');
   const [scannedCount, setScannedCount] = useState(0);
 
   const getFlexibleValue = (obj: any, targetKeys: string[], colIndex?: number) => {
     if (!obj) return '';
     const keys = Object.keys(obj);
-    const foundKey = keys.find(k => 
+    const foundKey = keys.find(k =>
       targetKeys.some(tk => k.trim().toLowerCase() === tk.trim().toLowerCase())
     );
     if (foundKey) return (obj[foundKey] || '').toString().trim();
@@ -57,7 +57,7 @@ const App: React.FC = () => {
           fetch(MESSAGES_CSV_URL),
           fetch(SETTINGS_CSV_URL)
         ]);
-        
+
         const invCsv = await invRes.text();
         const msgCsv = await msgRes.text();
         const userCsv = await userRes.text();
@@ -129,8 +129,8 @@ const App: React.FC = () => {
       return;
     }
 
-    let product = uploadedData.find(row => 
-      getFlexibleValue(row, ['Barcode Value', 'Barcode', 'Item Barcode', 'BARCODE'], 17) === barcode && 
+    let product = uploadedData.find(row =>
+      getFlexibleValue(row, ['Barcode Value', 'Barcode', 'Item Barcode', 'BARCODE'], 17) === barcode &&
       getFlexibleValue(row, ['Transaction Reference Number', 'Reference No', 'REF'], 9) === selectedReference
     );
 
@@ -152,7 +152,8 @@ const App: React.FC = () => {
       pDesignNo = match ? match[1] : barcode;
     }
 
-    // Call External API for Design MRP Detail via local proxy to avoid CORS
+    // Call External API for Design MRP Detail via proxy
+    // Localhost uses server.ts, Netlify uses netlify.toml redirects
     if (pDesignNo) {
       try {
         const apiRes = await fetch(`/api/proxy/design-mrp?designNumber=${pDesignNo}`);
@@ -164,6 +165,8 @@ const App: React.FC = () => {
             currentMrp: data.currentMrp,
             type: data.type
           };
+        } else {
+          console.error("Design MRP API Error, HTTP Status:", apiRes.status);
         }
       } catch (err) {
         console.error("Design MRP Proxy API Error:", err);
@@ -191,7 +194,7 @@ const App: React.FC = () => {
         const targetMrp = apiData.currentMrp.toString();
         if (targetMrp !== pMrp) {
           isMrpMismatch = true;
-          status = 'ERROR'; 
+          status = 'ERROR';
           matchedMessage = "MRP not changed pls Hand Over to Store Support team";
         }
       }
@@ -219,10 +222,10 @@ const App: React.FC = () => {
       if (!isMrpMismatch && apiData && apiData.discount > 0) {
         const isSilver = apiData.type?.toLowerCase() === 'silver';
         const slabValue = isSilver ? `${apiData.discount} SILVER` : `${apiData.discount}%`;
-        matchedMessage = matchedMessage 
-          ? `DISCOUNT ITEM: ${slabValue} | ${matchedMessage}` 
+        matchedMessage = matchedMessage
+          ? `DISCOUNT ITEM: ${slabValue} | ${matchedMessage}`
           : `DISCOUNT ITEM: ${slabValue}`;
-        customColor = "#8E24AA"; 
+        customColor = "#8E24AA";
         isDiscount = true;
       }
 
@@ -245,7 +248,7 @@ const App: React.FC = () => {
       apiData: apiData
     };
 
-    setLogs(prev => [newItem, ...prev].slice(0, 50)); 
+    setLogs(prev => [newItem, ...prev].slice(0, 50));
     if (status === 'SUCCESS') {
       setScannedCount(prev => prev + 1);
       setSessionCounts(prev => ({
@@ -280,7 +283,7 @@ const App: React.FC = () => {
           NAME: getFlexibleValue(product, ['Item Name', 'Name'], 12),
           COMB: getFlexibleValue(product, ['Combination ID', 'Comb ID'], 13),
           CONDITION: condition,
-          QTY: 1, 
+          QTY: 1,
           BARCODE: barcodeToSave,
           SESSION_ID: sessionId,
           OPERATOR: selectedUser
@@ -330,12 +333,12 @@ const App: React.FC = () => {
   }, []);
 
   const handleUpdateCondition = useCallback(async (logId: string, newCondition: string) => {
-    setLogs(prev => prev.map(item => 
+    setLogs(prev => prev.map(item =>
       item.id === logId ? { ...item, condition: newCondition } : item
     ));
     const itemToUpdate = logs.find(l => l.id === logId);
     if (itemToUpdate && itemToUpdate.status === 'SUCCESS') {
-      const product = uploadedData.find(row => 
+      const product = uploadedData.find(row =>
         getFlexibleValue(row, ['Barcode Value', 'Barcode'], 17) === itemToUpdate.barcode &&
         getFlexibleValue(row, ['Transaction Reference Number', 'Reference No', 'REF'], 9) === selectedReference
       );
@@ -346,7 +349,7 @@ const App: React.FC = () => {
   }, [logs, uploadedData, sessionId, selectedUser, selectedReference]);
 
   const renderView = () => {
-    switch(currentView) {
+    switch (currentView) {
       case View.UPLOADED_DATA:
         return <Report data={uploadedData} loading={loading} />;
       case View.SCAN_REPORT:
@@ -361,11 +364,11 @@ const App: React.FC = () => {
         return <NewMrp />;
       case View.SUMMARY:
         return (
-          <VerificationSummary 
-            logs={logs} 
-            stats={currentStats} 
-            operator={selectedUser} 
-            uploadedData={uploadedData} 
+          <VerificationSummary
+            logs={logs}
+            stats={currentStats}
+            operator={selectedUser}
+            uploadedData={uploadedData}
             onConfirm={finalizeSession}
             onBack={() => setCurrentView(View.HOME)}
           />
@@ -373,10 +376,10 @@ const App: React.FC = () => {
       case View.HOME:
       default:
         return (
-          <Dashboard 
-            logs={logs} 
-            stats={currentStats} 
-            onScan={handleScan} 
+          <Dashboard
+            logs={logs}
+            stats={currentStats}
+            onScan={handleScan}
             onClearLogs={() => setLogs([])}
             onUpdateCondition={handleUpdateCondition}
             uploadedData={uploadedData}
@@ -394,13 +397,13 @@ const App: React.FC = () => {
       <Sidebar currentView={currentView} setView={setCurrentView} />
       <main className="flex-1 flex flex-col min-w-0">
         {currentView === View.HOME && (
-          <Header 
-            stats={currentStats} 
+          <Header
+            stats={currentStats}
             references={referenceNumbers}
             users={usersData}
             selectedUser={selectedUser}
             onUserChange={setSelectedUser}
-            onSync={() => window.location.reload()} 
+            onSync={() => window.location.reload()}
             onReferenceChange={(val) => {
               setSelectedReference(val);
               resetSession();
